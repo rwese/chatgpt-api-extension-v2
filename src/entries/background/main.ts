@@ -251,17 +251,3 @@ function onCreated(): void {
     console.error(`Error: ${browser.runtime.lastError}`);
   }
 }
-browser.menus.onClicked.addListener(async (info: browser.Menus.OnClickData, tab: browser.Tabs.Tab | undefined) => {
-  if (!tab) {
-    return;
-  }
-
-  const { prompts } = await browser.storage.sync.get('prompts');
-
-  const promptIndex = prompts.findIndex((prompt: string, index: number) => info.menuItemId === `chatgpt-prompt-${index}`);
-
-  if (promptIndex > -1) {
-    const selectedPrompt = prompts[promptIndex];
-    await processSelection(info, tab, selectedPrompt.content);
-  }
-});
