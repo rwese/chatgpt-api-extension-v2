@@ -1,0 +1,16 @@
+{
+  "extensionName": {
+    "message": "ChatGPT Query",
+    "description": "Query ChatGPT via context menu actions."
+  },
+
+  "extensionDescription": {
+    "message": "Query ChatGPT via context menu actions",
+    "description": "Query ChatGPT via context menu actions"
+  },
+
+  "menuTitle": {
+    "message": "ChatGPT",
+    "description": "Title of context menu item that logs the selected text when clicked."
+  }
+}

@@ -1,6 +1,7 @@
 import pkg from "../package.json";
 
 const sharedManifest = {
+  default_locale: "en",
   icons: {
     16: "icons/16.png",
     32: "icons/32.png",
@@ -34,6 +35,7 @@ const ManifestV2 = {
     chrome_style: false,
   },
   permissions: [...sharedManifest.permissions, "*://*/*"],
+  web_accessible_resources: ["_locales/*/messages.json"],
 };
 
 const ManifestV3 = {
@@ -44,6 +46,12 @@ const ManifestV3 = {
   },
   host_permissions: ["*://*/*"],
   permissions: [],
+  web_accessible_resources: [
+    {
+      resources: ["_locales/*/messages.json"],
+      matches: ["*://*/*"],
+    },
+  ],
 };
 
 export function getManifest(manifestVersion: number, isDevelopment: boolean = false): chrome.runtime.Manifest {

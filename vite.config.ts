@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
       // sourcemap: true,
       watch: {
         clearScreen: false,
-        include: ["src/**", ".env"],
+        include: ["src/**", ".env", "_locales/**"],
       },
     },
   };

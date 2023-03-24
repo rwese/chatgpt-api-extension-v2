@@ -83,47 +83,6 @@ const defaultConfig = {
 export default defineComponent({
   name: 'ChatGPTOptions',
 
-  setup() {
-    const data = reactive({
-      // Add unsavedChanges property
-      unsavedChanges: false,
-      // Other data properties
-      // ...
-    });
-
-    watch(
-      () => data,
-      () => {
-        checkForUnsavedChanges(data);
-      },
-      { deep: true }
-    );
-
-    // Add a method to compare the current data with the saved configuration
-    async function checkForUnsavedChanges(data: any) {
-      const savedConfig = await browser.storage.sync.get(defaultConfig);
-      const currentConfig = {
-        model: data.model,
-        temperature: data.temperature,
-        maxTokens: data.maxTokens,
-        topP: data.topP,
-        frequencyPenalty: data.frequencyPenalty,
-        presencePenalty: data.presencePenalty,
-        prompts: data.prompts,
-      };
-
-      data.unsavedChanges = JSON.stringify(savedConfig) !== JSON.stringify(currentConfig);
-    }
-
-    // Add a computed property for the save button label
-    const saveButtonLabel = computed(() => (data.unsavedChanges ? 'Save *' : 'Save'));
-
-    return {
-      ...data,
-      saveButtonLabel,
-    };
-  },
-
   data() {
     return {
       model: '',
@@ -201,8 +160,6 @@ export default defineComponent({
       });
 
       await this.updateContextMenu();
-
-      this.unsavedChanges = false;
     },
 
     async resetDefaults() {
@@ -233,35 +190,38 @@ export default defineComponent({
       fileInput.accept = '.json';
       fileInput.style.display = 'none';
 
-      fileInput.addEventListener('change', async (event) => {
-        if (event && event.target) {
-          const inputElement = event.target as HTMLInputElement;
-          if (inputElement.files && inputElement.files.length > 0) {
-            const file = inputElement.files[0];
-            const reader = new FileReader();
+      fileInput.addEventListener("change", async (event) => {
+        if (!event || !event.target) return;
 
-            reader.onload = async (e) => {
-              if (e.target) {
-                const target = e.target as FileReader;
-                if (target.result) {
-                  try {
-                    const config = JSON.parse(target.result as string);
-                    if (config) {
-                      await browser.storage.sync.set(config);
-                      await this.restoreOptions();
-                    }
-                  } catch (error) {
-                    console.error("Error parsing configuration file:", error);
-                  }
-                }
-              }
-            };
+        const inputElement = event.target as HTMLInputElement;
+        const files = inputElement.files;
 
-            reader.readAsText(file);
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+          if (!e.target) return;
+
+          const target = e.target as FileReader;
+          const result = target.result;
+
+          if (!result) return;
+
+          try {
+            const config = JSON.parse(result as string);
+            if (!config) return;
+
+            await browser.storage.sync.set(config);
+            await this.restoreOptions();
+          } catch (error) {
+            console.error("Error parsing configuration file:", error);
           }
-        }
-      });
+        };
 
+        reader.readAsText(file);
+      });
 
       document.body.appendChild(fileInput);
       fileInput.click();
