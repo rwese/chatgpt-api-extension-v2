@@ -11,11 +11,6 @@ const sharedManifest = {
     open_in_tab: true,
   },
   permissions: ["menus", "activeTab", "storage", "contextMenus"],
-  browser_specific_settings: {
-    gecko: {
-      id: "your-addon-id@example.com",
-    },
-  },
 };
 
 const browserAction = {
@@ -51,7 +46,7 @@ const ManifestV3 = {
   permissions: [],
 };
 
-export function getManifest(manifestVersion: number): chrome.runtime.Manifest {
+export function getManifest(manifestVersion: number, isDevelopment: boolean = false): chrome.runtime.Manifest {
   const manifest = {
     author: pkg.author,
     description: pkg.description,
@@ -60,6 +55,19 @@ export function getManifest(manifestVersion: number): chrome.runtime.Manifest {
   };
 
   if (manifestVersion === 2) {
+    if (isDevelopment) {
+      return {
+        ...manifest,
+        ...ManifestV2,
+        manifest_version: manifestVersion,
+        permissions: [...ManifestV2.permissions, "http://*/*", "https://*/*"],
+        browser_specific_settings: {
+          gecko: {
+            id: "your-addon-id@example.com",
+          },
+        },
+      };
+    }
     return {
       ...manifest,
       ...ManifestV2,

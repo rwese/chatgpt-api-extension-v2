@@ -36,16 +36,19 @@
           <td>
             <input type="submit" value="Save" />
             <button type="button" id="resetDefaults" @click="resetDefaults">Reset Defaults</button>
+            <button type="button" id="exportConfig" @click="exportConfig">Export Config</button>
+            <button type="button" id="importConfig" @click="importConfig">Import Config</button>
           </td>
         </tr>
       </table>
       <h2>Prompts</h2>
       <div id="prompts">
         <div v-for="(prompt, index) in prompts" :key="index" class="prompt-group">
-          <label :for="'promptName'+index">Prompt Name:</label>
-          <input type="text" :id="'promptName'+index" :name="'promptName'+index" v-model="prompt.name" />
-          <label :for="'promptContent'+index">Prompt:</label>
-          <textarea :id="'promptContent'+index" :name="'promptContent'+index" class="prompt-content" v-model="prompt.content"></textarea>
+          <label :for="'promptName' + index">Prompt Name:</label>
+          <input type="text" :id="'promptName' + index" :name="'promptName' + index" v-model="prompt.name" />
+          <label :for="'promptContent' + index">Prompt:</label>
+          <textarea :id="'promptContent' + index" :name="'promptContent' + index" class="prompt-content"
+            v-model="prompt.content"></textarea>
           <button type="button" @click="removePrompt(index)">Remove</button>
         </div>
       </div>
@@ -59,7 +62,7 @@
 
 <script lang="ts">
 import browser from "webextension-polyfill";
-import { defineComponent } from 'vue';
+import { defineComponent, computed, watch, reactive } from 'vue';
 
 interface Prompt {
   name: string;
@@ -79,6 +82,47 @@ const defaultConfig = {
 
 export default defineComponent({
   name: 'ChatGPTOptions',
+
+  setup() {
+    const data = reactive({
+      // Add unsavedChanges property
+      unsavedChanges: false,
+      // Other data properties
+      // ...
+    });
+
+    watch(
+      () => data,
+      () => {
+        checkForUnsavedChanges(data);
+      },
+      { deep: true }
+    );
+
+    // Add a method to compare the current data with the saved configuration
+    async function checkForUnsavedChanges(data: any) {
+      const savedConfig = await browser.storage.sync.get(defaultConfig);
+      const currentConfig = {
+        model: data.model,
+        temperature: data.temperature,
+        maxTokens: data.maxTokens,
+        topP: data.topP,
+        frequencyPenalty: data.frequencyPenalty,
+        presencePenalty: data.presencePenalty,
+        prompts: data.prompts,
+      };
+
+      data.unsavedChanges = JSON.stringify(savedConfig) !== JSON.stringify(currentConfig);
+    }
+
+    // Add a computed property for the save button label
+    const saveButtonLabel = computed(() => (data.unsavedChanges ? 'Save *' : 'Save'));
+
+    return {
+      ...data,
+      saveButtonLabel,
+    };
+  },
 
   data() {
     return {
@@ -117,7 +161,7 @@ export default defineComponent({
       this.presencePenalty = result.presencePenalty;
       this.apiKey = result.API_KEY;
 
-      if (Array.isArray(result.prompts)) {
+      if (Array.isArray(result.prompts) && result.prompts.length > 0) {
         this.prompts = result.prompts;
       } else {
         const defaultPromptName = 'Spelling and Grammar Correction';
@@ -127,6 +171,10 @@ export default defineComponent({
           `\`\`\`\n%s\n\`\`\``;
 
         this.prompts.push({ name: defaultPromptName, content: defaultPromptContent });
+
+        await this.saveOptions();
+
+        this.updateContextMenu();
       }
     },
 
@@ -153,6 +201,8 @@ export default defineComponent({
       });
 
       await this.updateContextMenu();
+
+      this.unsavedChanges = false;
     },
 
     async resetDefaults() {
@@ -161,31 +211,120 @@ export default defineComponent({
     },
 
     async updateContextMenu() {
-      // send message to background script to update context menu
       await browser.runtime.sendMessage({ type: 'updateContextMenu' });
+    },
+
+    async exportConfig() {
+      const result = await browser.storage.sync.get(defaultConfig);
+      delete result.API_KEY;
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(result, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", "chatgpt-options-backup.json");
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+    },
+
+    importConfig() {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.json';
+      fileInput.style.display = 'none';
+
+      fileInput.addEventListener('change', async (event) => {
+        if (event && event.target) {
+          const inputElement = event.target as HTMLInputElement;
+          if (inputElement.files && inputElement.files.length > 0) {
+            const file = inputElement.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+              if (e.target) {
+                const target = e.target as FileReader;
+                if (target.result) {
+                  try {
+                    const config = JSON.parse(target.result as string);
+                    if (config) {
+                      await browser.storage.sync.set(config);
+                      await this.restoreOptions();
+                    }
+                  } catch (error) {
+                    console.error("Error parsing configuration file:", error);
+                  }
+                }
+              }
+            };
+
+            reader.readAsText(file);
+          }
+        }
+      });
+
+
+      document.body.appendChild(fileInput);
+      fileInput.click();
+      document.body.removeChild(fileInput);
     },
   },
 });
 </script>
 
 <style scoped>
+body {
+  font-family: 'Arial', sans-serif;
+}
+
 table {
   width: 100%;
+  margin-bottom: 20px;
 }
 
 td:first-child {
   width: 50%;
   padding-right: 10px;
+  text-align: right;
 }
 
 input[type='text'],
-textarea {
+textarea,
+input[type='password'] {
   width: 100%;
   box-sizing: border-box;
   padding: 5px;
   margin: 5px 0;
   border: 1px solid #ccc;
   border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s ease-in-out;
+}
+
+input[type='text']:focus,
+textarea:focus,
+input[type='password']:focus {
+  border-color: #0078d7;
+}
+
+input[type='submit'],
+button {
+  background-color: #0078d7;
+  color: #fff;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+input[type='submit']:hover,
+button:hover {
+  background-color: #005fa3;
+}
+
+h1,
+h2 {
+  color: #0078d7;
 }
 
 .prompt-group {
@@ -212,6 +351,7 @@ textarea {
 #prompts-help {
   margin-top: 10px;
   font-size: 12px;
+  color: #666;
 }
 
 #addPrompt {

@@ -12,12 +12,19 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       webExtension({
-        manifest: getManifest(Number(env.MANIFEST_VERSION)),
+        manifest: getManifest(Number(env.MANIFEST_VERSION), Boolean(env.IS_DEVELOPMENT)),
       }),
     ],
     resolve: {
       alias: {
         "~": path.resolve(__dirname, "./src"),
+      },
+    },
+    build: {
+      // sourcemap: true,
+      watch: {
+        clearScreen: false,
+        include: ["src/**", ".env"],
       },
     },
   };

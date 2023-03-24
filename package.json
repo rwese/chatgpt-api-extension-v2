@@ -1,9 +1,9 @@
 {
-  "name": "vite-web-extension",
+  "name": "chatgpt-api-v2 context menu extension",
   "version": "1.0.0",
-  "displayName": "Vite Web Extension",
-  "author": "@samrum/vite-plugin-web-extension",
-  "description": "A @samrum/vite-plugin-web-extension web extension",
+  "displayName": "ChatGPT api extension",
+  "author": "@rweselowski",
+  "description": "A @rweselowski/chatgpt-api-v2 web extension",
   "scripts": {
     "build": "vue-tsc --noEmit && vite build",
     "watch": "vite build --watch --mode development --minify false",

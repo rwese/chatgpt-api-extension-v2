@@ -1,8 +1,15 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "composite": true,
-    "module": "esnext",
-    "moduleResolution": "node"
+    "module": "CommonJS",
+    "outDir": "dist"
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "src/main.ts",
+    "src/**/*.spec.ts"
+  ]
 }
